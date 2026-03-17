@@ -14,7 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      expenses: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          note: string | null
+          receipt_url: string | null
+          title: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          note?: string | null
+          receipt_url?: string | null
+          title: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          note?: string | null
+          receipt_url?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      sale_items: {
+        Row: {
+          amount: number
+          id: string
+          kg: number
+          sale_id: string | null
+        }
+        Insert: {
+          amount: number
+          id?: string
+          kg: number
+          sale_id?: string | null
+        }
+        Update: {
+          amount?: number
+          id?: string
+          kg?: number
+          sale_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales: {
+        Row: {
+          created_at: string | null
+          customer_type: string | null
+          id: string
+          total_amount: number
+          total_kg: number
+        }
+        Insert: {
+          created_at?: string | null
+          customer_type?: string | null
+          id?: string
+          total_amount: number
+          total_kg: number
+        }
+        Update: {
+          created_at?: string | null
+          customer_type?: string | null
+          id?: string
+          total_amount?: number
+          total_kg?: number
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          distributor_price_per_kg: number
+          id: number
+          retail_price_per_kg: number
+          updated_at: string | null
+        }
+        Insert: {
+          distributor_price_per_kg?: number
+          id?: number
+          retail_price_per_kg?: number
+          updated_at?: string | null
+        }
+        Update: {
+          distributor_price_per_kg?: number
+          id?: number
+          retail_price_per_kg?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
