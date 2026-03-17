@@ -58,10 +58,7 @@ export function POSView({ prices }: POSViewProps) {
       await supabase.from('sale_items').insert(saleItems);
 
       toast({ title: 'Sale Complete', description: `₦${totalAmount.toLocaleString()} recorded.` });
-
-      // Trigger print
       window.print();
-
       setItems([{ id: crypto.randomUUID(), kg: 0, amount: 0 }]);
     }
     setLoading(false);
@@ -69,16 +66,16 @@ export function POSView({ prices }: POSViewProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left: Entry */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="surface-card p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold heading-tight">New Transaction</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
+        {/* Entry */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="surface-card p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-bold heading-tight">New Transaction</h2>
               <div className="flex bg-secondary p-1 rounded-lg">
                 <button
                   onClick={() => setCustomerType('Retail')}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-150 ${
+                  className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-150 ${
                     customerType === 'Retail' ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground'
                   }`}
                 >
@@ -86,7 +83,7 @@ export function POSView({ prices }: POSViewProps) {
                 </button>
                 <button
                   onClick={() => setCustomerType('Distributor')}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-150 ${
+                  className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all duration-150 ${
                     customerType === 'Distributor' ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground'
                   }`}
                 >
@@ -95,68 +92,68 @@ export function POSView({ prices }: POSViewProps) {
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               {items.map((item) => (
-                <div key={item.id} className="flex items-end gap-4 animate-fade-in">
-                  <div className="flex-1 space-y-1.5">
-                    <label className="label-caps">KG</label>
+                <div key={item.id} className="flex items-end gap-2 sm:gap-4 animate-fade-in">
+                  <div className="flex-1 space-y-1">
+                    <label className="label-caps text-[10px]">KG</label>
                     <input
                       type="number"
                       value={item.kg || ''}
                       onChange={(e) => updateItem(item.id, 'kg', parseFloat(e.target.value) || 0)}
-                      className="w-full h-12 bg-secondary rounded-xl px-4 font-mono-value text-lg focus:ring-2 ring-primary outline-none transition-all"
+                      className="w-full h-11 bg-secondary rounded-xl px-3 font-mono-value text-base focus:ring-2 ring-primary outline-none transition-all"
                       placeholder="0.00"
                     />
                   </div>
-                  <div className="flex-1 space-y-1.5">
-                    <label className="label-caps">Amount (₦)</label>
+                  <div className="flex-1 space-y-1">
+                    <label className="label-caps text-[10px]">Amount (₦)</label>
                     <input
                       type="number"
                       value={item.amount || ''}
                       onChange={(e) => updateItem(item.id, 'amount', parseFloat(e.target.value) || 0)}
-                      className="w-full h-12 bg-secondary rounded-xl px-4 font-mono-value text-lg focus:ring-2 ring-primary outline-none transition-all"
+                      className="w-full h-11 bg-secondary rounded-xl px-3 font-mono-value text-base focus:ring-2 ring-primary outline-none transition-all"
                       placeholder="0.00"
                     />
                   </div>
                   {items.length > 1 && (
                     <button
                       onClick={() => removeItem(item.id)}
-                      className="h-12 w-12 flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
+                      className="h-11 w-11 shrink-0 flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
                     >
-                      <Trash2 size={20} />
+                      <Trash2 size={18} />
                     </button>
                   )}
                 </div>
               ))}
               <button
                 onClick={addItem}
-                className="w-full h-12 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-all duration-150 font-medium"
+                className="w-full h-11 border-2 border-dashed border-border rounded-xl flex items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-all duration-150 font-medium text-sm"
               >
-                <Plus size={18} /> Add Cylinder
+                <Plus size={16} /> Add Cylinder
               </button>
             </div>
           </div>
         </div>
 
-        {/* Right: Summary */}
-        <div className="space-y-6">
-          <div className="surface-card p-6 sticky top-24">
-            <h3 className="label-caps mb-6">Order Summary</h3>
-            <div className="space-y-4 mb-8">
+        {/* Summary */}
+        <div>
+          <div className="surface-card p-4 sm:p-6 lg:sticky lg:top-20">
+            <h3 className="label-caps mb-4">Order Summary</h3>
+            <div className="space-y-3 mb-6">
               <div className="flex justify-between items-end">
-                <span className="text-muted-foreground">Total Weight</span>
-                <span className="text-2xl font-mono-value font-bold">
-                  {totalKg.toFixed(2)} <small className="text-sm font-sans text-muted-foreground">KG</small>
+                <span className="text-muted-foreground text-sm">Total Weight</span>
+                <span className="text-xl font-mono-value font-bold">
+                  {totalKg.toFixed(2)} <small className="text-xs font-sans text-muted-foreground">KG</small>
                 </span>
               </div>
               <div className="flex justify-between items-end">
-                <span className="text-muted-foreground">Current Rate</span>
-                <span className="text-lg font-mono-value">₦{currentPrice.toLocaleString()}</span>
+                <span className="text-muted-foreground text-sm">Rate</span>
+                <span className="text-base font-mono-value">₦{currentPrice.toLocaleString()}</span>
               </div>
               <div className="h-px bg-border" />
-              <div className="flex justify-between items-end pt-2">
-                <span className="font-bold">Total Amount</span>
-                <span className="text-3xl font-mono-value font-black text-primary">
+              <div className="flex justify-between items-end pt-1">
+                <span className="font-bold text-sm">Total</span>
+                <span className="text-2xl font-mono-value font-black text-primary">
                   ₦{totalAmount.toLocaleString()}
                 </span>
               </div>
@@ -165,9 +162,9 @@ export function POSView({ prices }: POSViewProps) {
             <button
               disabled={loading || totalAmount === 0}
               onClick={handleCheckout}
-              className="w-full h-14 bg-primary text-primary-foreground rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all duration-150 disabled:opacity-50 disabled:active:scale-100"
+              className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all duration-150 disabled:opacity-50"
             >
-              {loading ? <Loader2 className="animate-spin" /> : <><Printer size={20} /> Complete & Print</>}
+              {loading ? <Loader2 className="animate-spin" /> : <><Printer size={18} /> Complete & Print</>}
             </button>
           </div>
         </div>

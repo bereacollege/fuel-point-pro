@@ -18,9 +18,7 @@ export function ExpenseView() {
     if (file) {
       const fileExt = file.name.split('.').pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from('receipts')
-        .upload(fileName, file);
+      const { error: uploadError } = await supabase.storage.from('receipts').upload(fileName, file);
 
       if (!uploadError) {
         const { data: urlData } = supabase.storage.from('receipts').getPublicUrl(fileName);
@@ -46,41 +44,41 @@ export function ExpenseView() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto surface-card p-8 animate-fade-in">
-      <h2 className="text-2xl font-bold heading-tight mb-6">Log Expense</h2>
-      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium">Expense Title</label>
+    <div className="max-w-lg mx-auto surface-card p-5 sm:p-8 animate-fade-in">
+      <h2 className="text-lg sm:text-2xl font-bold heading-tight mb-5">Log Expense</h2>
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-3">
+        <div className="space-y-1">
+          <label className="text-xs font-medium">Expense Title</label>
           <input
             name="title"
             required
-            className="w-full h-12 bg-secondary rounded-xl px-4 outline-none focus:ring-2 ring-primary transition-all"
+            className="w-full h-11 bg-secondary rounded-xl px-4 outline-none focus:ring-2 ring-primary transition-all text-sm"
             placeholder="e.g. Generator Fuel"
           />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium">Amount (₦)</label>
+        <div className="space-y-1">
+          <label className="text-xs font-medium">Amount (₦)</label>
           <input
             name="amount"
             type="number"
             required
-            className="w-full h-12 bg-secondary rounded-xl px-4 outline-none focus:ring-2 ring-primary transition-all font-mono-value"
+            className="w-full h-11 bg-secondary rounded-xl px-4 outline-none focus:ring-2 ring-primary transition-all font-mono-value text-sm"
             placeholder="0.00"
           />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium">Notes</label>
+        <div className="space-y-1">
+          <label className="text-xs font-medium">Notes</label>
           <textarea
             name="note"
-            className="w-full h-24 bg-secondary rounded-xl p-4 outline-none focus:ring-2 ring-primary transition-all resize-none"
+            className="w-full h-20 bg-secondary rounded-xl p-4 outline-none focus:ring-2 ring-primary transition-all resize-none text-sm"
             placeholder="Optional details..."
           />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium">Receipt (optional)</label>
-          <label className="flex items-center justify-center w-full h-12 bg-secondary rounded-xl cursor-pointer hover:bg-muted transition-colors gap-2 text-muted-foreground">
-            <Upload size={18} />
-            <span>{file ? file.name : 'Upload receipt image/PDF'}</span>
+        <div className="space-y-1">
+          <label className="text-xs font-medium">Receipt (optional)</label>
+          <label className="flex items-center justify-center w-full h-11 bg-secondary rounded-xl cursor-pointer hover:bg-muted transition-colors gap-2 text-muted-foreground text-sm">
+            <Upload size={16} />
+            <span className="truncate max-w-[200px]">{file ? file.name : 'Upload receipt'}</span>
             <input
               type="file"
               accept="image/*,.pdf"
@@ -91,9 +89,9 @@ export function ExpenseView() {
         </div>
         <button
           disabled={loading}
-          className="w-full h-12 bg-foreground text-background rounded-xl font-bold hover:opacity-90 active:scale-[0.98] transition-all duration-150 flex items-center justify-center gap-2"
+          className="w-full h-11 bg-foreground text-background rounded-xl font-bold hover:opacity-90 active:scale-[0.98] transition-all duration-150 flex items-center justify-center gap-2 text-sm"
         >
-          {loading ? <Loader2 className="animate-spin" size={18} /> : 'Save Expense'}
+          {loading ? <Loader2 className="animate-spin" size={16} /> : 'Save Expense'}
         </button>
       </form>
     </div>
