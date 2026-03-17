@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Upload, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 

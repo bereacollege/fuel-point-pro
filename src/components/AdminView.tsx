@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { format, startOfDay, startOfWeek, startOfMonth, isAfter } from 'date-fns';
 import { StatCard } from './StatCard';
 import { ReceiptTemplate } from './ReceiptTemplate';

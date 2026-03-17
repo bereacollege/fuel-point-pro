@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Receipt, Wallet, Settings } from 'lucide-react';
 import { NavBtn } from '@/components/NavBtn';
 import { POSView } from '@/components/POSView';

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Plus, Trash2, Printer, Loader2 } from 'lucide-react';
 import { ReceiptTemplate } from './ReceiptTemplate';
 import { toast } from '@/hooks/use-toast';
