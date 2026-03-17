@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      checkins: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
@@ -96,18 +114,21 @@ export type Database = {
       }
       settings: {
         Row: {
+          after_hours_access: boolean
           distributor_price_per_kg: number
           id: number
           retail_price_per_kg: number
           updated_at: string | null
         }
         Insert: {
+          after_hours_access?: boolean
           distributor_price_per_kg?: number
           id?: number
           retail_price_per_kg?: number
           updated_at?: string | null
         }
         Update: {
+          after_hours_access?: boolean
           distributor_price_per_kg?: number
           id?: number
           retail_price_per_kg?: number
