@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      cashier_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          label: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          label?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          label?: string
+        }
+        Relationships: []
+      }
       checkins: {
         Row: {
           created_at: string
@@ -93,6 +117,7 @@ export type Database = {
           created_at: string | null
           customer_type: string | null
           id: string
+          receipt_number: string | null
           total_amount: number
           total_kg: number
         }
@@ -100,6 +125,7 @@ export type Database = {
           created_at?: string | null
           customer_type?: string | null
           id?: string
+          receipt_number?: string | null
           total_amount: number
           total_kg: number
         }
@@ -107,6 +133,7 @@ export type Database = {
           created_at?: string | null
           customer_type?: string | null
           id?: string
+          receipt_number?: string | null
           total_amount?: number
           total_kg?: number
         }
