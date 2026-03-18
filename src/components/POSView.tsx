@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Trash2, Printer, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Printer, Loader2, Copy } from 'lucide-react';
 import { ReceiptTemplate } from './ReceiptTemplate';
 import { toast } from '@/hooks/use-toast';
 
@@ -15,7 +15,13 @@ export function POSView({ prices }: POSViewProps) {
   const [customerType, setCustomerType] = useState<CustomerType>('Retail');
   const [items, setItems] = useState<SaleItem[]>([{ id: crypto.randomUUID(), kg: 0, amount: 0 }]);
   const [loading, setLoading] = useState(false);
-  const receiptRef = useRef<HTMLDivElement>(null);
+  const [printData, setPrintData] = useState<{
+    items: SaleItem[];
+    totalKg: number;
+    totalAmount: number;
+    customerType: string;
+    receiptNumber: string;
+  } | null>(null);
 
   const currentPrice = customerType === 'Retail' ? prices.retail : prices.distributor;
 
@@ -31,6 +37,7 @@ export function POSView({ prices }: POSViewProps) {
 
   const addItem = () => setItems([...items, { id: crypto.randomUUID(), kg: 0, amount: 0 }]);
   const removeItem = (id: string) => setItems(items.filter(i => i.id !== id));
+  const duplicateItem = (item: SaleItem) => setItems([...items, { id: crypto.randomUUID(), kg: item.kg, amount: item.amount }]);
 
   const totalKg = items.reduce((acc, curr) => acc + curr.kg, 0);
   const totalAmount = items.reduce((acc, curr) => acc + curr.amount, 0);
@@ -39,9 +46,13 @@ export function POSView({ prices }: POSViewProps) {
     if (totalAmount <= 0) return;
     setLoading(true);
 
+    const checkoutItems = items.filter(i => i.kg > 0);
+    const checkoutTotalKg = checkoutItems.reduce((acc, i) => acc + i.kg, 0);
+    const checkoutTotalAmount = checkoutItems.reduce((acc, i) => acc + i.amount, 0);
+
     const { data: sale, error: saleError } = await supabase
       .from('sales')
-      .insert([{ total_kg: totalKg, total_amount: totalAmount, customer_type: customerType }])
+      .insert([{ total_kg: checkoutTotalKg, total_amount: checkoutTotalAmount, customer_type: customerType }])
       .select()
       .single();
 
@@ -52,17 +63,34 @@ export function POSView({ prices }: POSViewProps) {
     }
 
     if (sale) {
-      const saleItems = items
-        .filter(i => i.kg > 0)
-        .map(i => ({ sale_id: sale.id, kg: i.kg, amount: i.amount }));
+      const saleItems = checkoutItems.map(i => ({ sale_id: sale.id, kg: i.kg, amount: i.amount }));
       await supabase.from('sale_items').insert(saleItems);
 
-      toast({ title: 'Sale Complete', description: `₦${totalAmount.toLocaleString()} recorded.` });
-      window.print();
+      // Store data for printing before resetting
+      setPrintData({
+        items: checkoutItems,
+        totalKg: checkoutTotalKg,
+        totalAmount: checkoutTotalAmount,
+        customerType,
+        receiptNumber: (sale as any).receipt_number || '',
+      });
+
+      toast({ title: 'Sale Complete', description: `₦${checkoutTotalAmount.toLocaleString()} recorded.` });
+
+      // Print after a tick so the receipt renders
+      setTimeout(() => window.print(), 100);
+
       setItems([{ id: crypto.randomUUID(), kg: 0, amount: 0 }]);
     }
     setLoading(false);
   };
+
+  // Use printData for receipt if available, otherwise current items
+  const receiptItems = printData ? printData.items : items;
+  const receiptTotalKg = printData ? printData.totalKg : totalKg;
+  const receiptTotalAmount = printData ? printData.totalAmount : totalAmount;
+  const receiptCustomerType = printData ? printData.customerType : customerType;
+  const receiptNumber = printData ? printData.receiptNumber : '';
 
   return (
     <>
@@ -115,6 +143,13 @@ export function POSView({ prices }: POSViewProps) {
                       placeholder="0.00"
                     />
                   </div>
+                  <button
+                    onClick={() => duplicateItem(item)}
+                    title="Duplicate this item"
+                    className="h-11 w-11 shrink-0 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <Copy size={16} />
+                  </button>
                   {items.length > 1 && (
                     <button
                       onClick={() => removeItem(item.id)}
@@ -171,8 +206,14 @@ export function POSView({ prices }: POSViewProps) {
       </div>
 
       {/* Hidden receipt for printing */}
-      <div ref={receiptRef} className="hidden print-receipt print:block p-8 text-foreground">
-        <ReceiptTemplate items={items} totalKg={totalKg} totalAmount={totalAmount} customerType={customerType} />
+      <div className="hidden print-receipt print:block p-8 text-foreground">
+        <ReceiptTemplate
+          items={receiptItems}
+          totalKg={receiptTotalKg}
+          totalAmount={receiptTotalAmount}
+          customerType={receiptCustomerType}
+          receiptNumber={receiptNumber}
+        />
       </div>
     </>
   );
