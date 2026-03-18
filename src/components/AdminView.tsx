@@ -187,6 +187,27 @@ export function AdminView({ prices, setPrices }: AdminViewProps) {
         <StatCard label="Net Profit" value={`₦${(stats.revenue - stats.expenses).toLocaleString()}`} variant="success" />
       </div>
 
+      {/* Revenue Chart */}
+      <div className="surface-card p-4">
+        <h3 className="font-bold heading-tight text-sm mb-4">Revenue (Last 7 Days)</h3>
+        <div className="h-52">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <XAxis dataKey="day" tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+              <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+              <Tooltip
+                contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                labelStyle={{ color: 'hsl(var(--foreground))' }}
+                formatter={(v: number) => [`₦${v.toLocaleString()}`, 'Revenue']}
+              />
+              <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="expenses" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Checkins */}
       {checkins.length > 0 && (
         <div className="surface-card overflow-hidden">
