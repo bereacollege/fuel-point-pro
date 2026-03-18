@@ -3,9 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, startOfDay, startOfWeek, startOfMonth, isAfter, subDays } from 'date-fns';
 import { StatCard } from './StatCard';
 import { ReceiptTemplate } from './ReceiptTemplate';
-import { Lock, Eye, Download, Moon, Sun } from 'lucide-react';
+import { Lock, Eye, Download, Moon, Sun, Trash2, Plus, Power, PowerOff } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface AdminViewProps {
   prices: { retail: number; distributor: number };
@@ -24,22 +28,27 @@ export function AdminView({ prices, setPrices }: AdminViewProps) {
   const [filter, setFilter] = useState<FilterType>('all');
   const [receiptSale, setReceiptSale] = useState<any | null>(null);
   const [afterHoursAccess, setAfterHoursAccess] = useState(false);
+  const [cashierCodes, setCashierCodes] = useState<any[]>([]);
+  const [newCodeLabel, setNewCodeLabel] = useState('');
+  const [newCodeValue, setNewCodeValue] = useState('');
 
   useEffect(() => {
     if (authenticated) fetchData();
   }, [authenticated]);
 
   const fetchData = async () => {
-    const [salesRes, expRes, settingsRes, checkinsRes] = await Promise.all([
+    const [salesRes, expRes, settingsRes, checkinsRes, codesRes] = await Promise.all([
       supabase.from('sales').select('*').order('created_at', { ascending: false }),
       supabase.from('expenses').select('*').order('created_at', { ascending: false }),
       supabase.from('settings').select('*').single(),
       supabase.from('checkins').select('*').order('created_at', { ascending: false }).limit(30),
+      supabase.from('cashier_codes').select('*').order('created_at', { ascending: false }),
     ]);
     if (salesRes.data) setSales(salesRes.data);
     if (expRes.data) setExpenses(expRes.data);
     if (settingsRes.data) setAfterHoursAccess(!!(settingsRes.data as any).after_hours_access);
     if (checkinsRes.data) setCheckins(checkinsRes.data);
+    if (codesRes.data) setCashierCodes(codesRes.data);
   };
 
   const toggleAfterHours = async () => {
@@ -47,6 +56,55 @@ export function AdminView({ prices, setPrices }: AdminViewProps) {
     await supabase.from('settings').update({ after_hours_access: newVal } as any).eq('id', 1);
     setAfterHoursAccess(newVal);
     toast({ title: newVal ? 'After-Hours Access Enabled' : 'After-Hours Access Disabled' });
+  };
+
+  // Delete helpers
+  const deleteSale = async (saleId: string) => {
+    await supabase.from('sale_items').delete().eq('sale_id', saleId);
+    await supabase.from('sales').delete().eq('id', saleId);
+    setSales(prev => prev.filter(s => s.id !== saleId));
+    toast({ title: 'Transaction Deleted' });
+  };
+
+  const deleteExpense = async (expId: string) => {
+    await supabase.from('expenses').delete().eq('id', expId);
+    setExpenses(prev => prev.filter(e => e.id !== expId));
+    toast({ title: 'Expense Deleted' });
+  };
+
+  const deleteCheckin = async (checkin: any) => {
+    // Try to delete storage file
+    const urlParts = checkin.image_url?.split('/');
+    const fileName = urlParts?.[urlParts.length - 1];
+    if (fileName) await supabase.storage.from('checkins').remove([fileName]);
+    await supabase.from('checkins').delete().eq('id', checkin.id);
+    setCheckins(prev => prev.filter(c => c.id !== checkin.id));
+    toast({ title: 'Check-in Deleted' });
+  };
+
+  // Cashier code helpers
+  const addCashierCode = async () => {
+    if (newCodeValue.length !== 4 || !newCodeLabel.trim()) {
+      toast({ title: 'Invalid', description: 'Provide a label and 4-digit code.', variant: 'destructive' });
+      return;
+    }
+    const { error } = await supabase.from('cashier_codes').insert([{ code: newCodeValue, label: newCodeLabel.trim() }]);
+    if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
+    setNewCodeLabel('');
+    setNewCodeValue('');
+    fetchData();
+    toast({ title: 'Cashier Code Created' });
+  };
+
+  const toggleCashierCode = async (id: string, currentActive: boolean) => {
+    await supabase.from('cashier_codes').update({ active: !currentActive }).eq('id', id);
+    setCashierCodes(prev => prev.map(c => c.id === id ? { ...c, active: !currentActive } : c));
+  };
+
+  const deleteCashierCode = async (id: string) => {
+    await supabase.from('cashier_codes').delete().eq('id', id);
+    setCashierCodes(prev => prev.filter(c => c.id !== id));
+    toast({ title: 'Cashier Code Deleted' });
   };
 
   const filterDate = useMemo(() => {
@@ -149,10 +207,11 @@ export function AdminView({ prices, setPrices }: AdminViewProps) {
         </button>
         <div className="surface-card p-6 max-w-sm mx-auto">
           <ReceiptTemplate
-            items={items.map(i => ({ kg: Number(i.kg), amount: Number(i.amount) }))}
+            items={items.map((i: any) => ({ kg: Number(i.kg), amount: Number(i.amount) }))}
             totalKg={Number(receiptSale.total_kg)}
             totalAmount={Number(receiptSale.total_amount)}
             customerType={receiptSale.customer_type}
+            receiptNumber={receiptSale.receipt_number}
             date={new Date(receiptSale.created_at)}
           />
           <button
@@ -216,12 +275,77 @@ export function AdminView({ prices, setPrices }: AdminViewProps) {
               <Tooltip
                 contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
                 labelStyle={{ color: 'hsl(var(--foreground))' }}
-                formatter={(v: number) => [`₦${v.toLocaleString()}`, 'Revenue']}
+                formatter={(v: number) => [`₦${v.toLocaleString()}`, '']}
               />
               <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               <Bar dataKey="expenses" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Cashier Codes */}
+      <div className="surface-card overflow-hidden">
+        <div className="p-4 border-b border-border">
+          <h3 className="font-bold heading-tight text-sm">Cashier Codes</h3>
+        </div>
+        <div className="p-4 space-y-3">
+          <div className="flex gap-2">
+            <input
+              placeholder="Label (e.g. Ada)"
+              value={newCodeLabel}
+              onChange={(e) => setNewCodeLabel(e.target.value)}
+              className="flex-1 h-10 bg-secondary rounded-xl px-3 text-sm outline-none focus:ring-2 ring-primary transition-all"
+            />
+            <input
+              placeholder="4-digit code"
+              inputMode="numeric"
+              maxLength={4}
+              value={newCodeValue}
+              onChange={(e) => setNewCodeValue(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              className="w-28 h-10 bg-secondary rounded-xl px-3 text-sm font-mono-value text-center outline-none focus:ring-2 ring-primary transition-all"
+            />
+            <button onClick={addCashierCode} className="h-10 w-10 bg-primary text-primary-foreground rounded-xl flex items-center justify-center shrink-0">
+              <Plus size={18} />
+            </button>
+          </div>
+          {cashierCodes.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-2">No cashier codes yet. Create one above.</p>
+          )}
+          {cashierCodes.map((c) => (
+            <div key={c.id} className="flex items-center justify-between bg-secondary rounded-xl px-4 py-2.5">
+              <div>
+                <span className="font-medium text-sm">{c.label}</span>
+                <span className="ml-2 font-mono-value text-xs text-muted-foreground">({c.code})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => toggleCashierCode(c.id, c.active)}
+                  className={`p-1.5 rounded-lg transition-colors ${c.active ? 'text-accent' : 'text-muted-foreground'}`}
+                  title={c.active ? 'Deactivate' : 'Activate'}
+                >
+                  {c.active ? <Power size={16} /> : <PowerOff size={16} />}
+                </button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive transition-colors">
+                      <Trash2 size={16} />
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Cashier Code?</AlertDialogTitle>
+                      <AlertDialogDescription>This will permanently remove "{c.label}" code. The cashier won't be able to check in.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => deleteCashierCode(c.id)}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -233,11 +357,28 @@ export function AdminView({ prices, setPrices }: AdminViewProps) {
           </div>
           <div className="flex gap-3 p-4 overflow-x-auto">
             {checkins.map((c) => (
-              <div key={c.id} className="shrink-0 w-28">
+              <div key={c.id} className="shrink-0 w-28 relative group">
                 <img src={c.image_url} alt="Check-in" className="w-28 h-28 object-cover rounded-xl bg-secondary" />
                 <p className="text-[10px] text-muted-foreground mt-1 text-center">
                   {format(new Date(c.created_at), 'MMM d, HH:mm')}
                 </p>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button className="absolute top-1 right-1 p-1 bg-background/80 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-destructive">
+                      <Trash2 size={14} />
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Check-in Photo?</AlertDialogTitle>
+                      <AlertDialogDescription>This will permanently remove this check-in photo from the system.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => deleteCheckin(c)}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             ))}
           </div>
@@ -283,9 +424,9 @@ export function AdminView({ prices, setPrices }: AdminViewProps) {
             <table className="w-full text-left text-xs sm:text-sm">
               <thead>
                 <tr className="bg-secondary text-muted-foreground font-bold uppercase text-[10px] tracking-widest">
+                  <th className="px-4 py-2.5">Receipt #</th>
                   <th className="px-4 py-2.5">Date</th>
                   <th className="px-4 py-2.5">Type</th>
-                  <th className="px-4 py-2.5">KG</th>
                   <th className="px-4 py-2.5 text-right">Amount</th>
                   <th className="px-4 py-2.5 text-right"></th>
                 </tr>
@@ -293,12 +434,29 @@ export function AdminView({ prices, setPrices }: AdminViewProps) {
               <tbody className="divide-y divide-border">
                 {filteredSales.map((sale) => (
                   <tr key={sale.id} className="hover:bg-secondary/50 transition-colors">
+                    <td className="px-4 py-3 font-mono-value text-xs">{sale.receipt_number || '—'}</td>
                     <td className="px-4 py-3 text-muted-foreground">{format(new Date(sale.created_at), 'MMM d, HH:mm')}</td>
                     <td className="px-4 py-3 font-medium">{sale.customer_type}</td>
-                    <td className="px-4 py-3 font-mono-value">{sale.total_kg}</td>
                     <td className="px-4 py-3 text-right font-mono-value font-bold">₦{Number(sale.total_amount).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right flex items-center justify-end gap-1">
                       <button onClick={() => viewReceipt(sale)} className="text-primary hover:opacity-70 transition-opacity"><Eye size={16} /></button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <button className="text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={16} /></button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Transaction?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete receipt {sale.receipt_number || sale.id.slice(0, 8)} (₦{Number(sale.total_amount).toLocaleString()}). This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteSale(sale.id)}>Delete</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </td>
                   </tr>
                 ))}
@@ -321,6 +479,7 @@ export function AdminView({ prices, setPrices }: AdminViewProps) {
                 <th className="px-4 py-2.5">Title</th>
                 <th className="px-4 py-2.5 hidden sm:table-cell">Note</th>
                 <th className="px-4 py-2.5 text-right">Amount</th>
+                <th className="px-4 py-2.5 text-right"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -330,6 +489,25 @@ export function AdminView({ prices, setPrices }: AdminViewProps) {
                   <td className="px-4 py-3 font-medium">{exp.title}</td>
                   <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{exp.note || '—'}</td>
                   <td className="px-4 py-3 text-right font-mono-value font-bold text-destructive">₦{Number(exp.amount).toLocaleString()}</td>
+                  <td className="px-4 py-3 text-right">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button className="text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={16} /></button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Expense?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete "{exp.title}" (₦{Number(exp.amount).toLocaleString()}). This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteExpense(exp.id)}>Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </td>
                 </tr>
               ))}
             </tbody>

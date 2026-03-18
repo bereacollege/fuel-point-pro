@@ -10,10 +10,11 @@ interface ReceiptTemplateProps {
   totalKg: number;
   totalAmount: number;
   customerType: string;
+  receiptNumber?: string;
   date?: Date;
 }
 
-export function ReceiptTemplate({ items, totalKg, totalAmount, customerType, date }: ReceiptTemplateProps) {
+export function ReceiptTemplate({ items, totalKg, totalAmount, customerType, receiptNumber, date }: ReceiptTemplateProps) {
   const d = date || new Date();
   return (
     <div className="w-[300px] text-center mx-auto font-mono text-sm">
@@ -21,6 +22,7 @@ export function ReceiptTemplate({ items, totalKg, totalAmount, customerType, dat
       <p className="text-xs">1, 7up Road, Ogborhill, Aba</p>
       <div className="my-3 border-t border-dashed border-foreground" />
       <div className="text-left text-xs space-y-0.5">
+        {receiptNumber && <p className="font-bold">Receipt #: {receiptNumber}</p>}
         <p>Date: {format(d, 'dd/MM/yyyy')}</p>
         <p>Time: {format(d, 'HH:mm:ss')}</p>
         <p>Customer: {customerType}</p>
