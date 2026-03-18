@@ -74,6 +74,23 @@ export function AdminView({ prices, setPrices }: AdminViewProps) {
     return { revenue, kg, count: filteredSales.length, expenses: exp };
   }, [filteredSales, filteredExpenses]);
 
+  const chartData = useMemo(() => {
+    const days: { day: string; revenue: number; expenses: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = startOfDay(subDays(new Date(), i));
+      const nextD = new Date(d);
+      nextD.setDate(nextD.getDate() + 1);
+      const dayRevenue = sales
+        .filter(s => { const t = new Date(s.created_at); return t >= d && t < nextD; })
+        .reduce((acc, s) => acc + Number(s.total_amount), 0);
+      const dayExpenses = expenses
+        .filter(e => { const t = new Date(e.created_at); return t >= d && t < nextD; })
+        .reduce((acc, e) => acc + Number(e.amount), 0);
+      days.push({ day: format(d, 'EEE'), revenue: dayRevenue, expenses: dayExpenses });
+    }
+    return days;
+  }, [sales, expenses]);
+
   const updatePrices = async (e: React.FormEvent) => {
     e.preventDefault();
     await supabase.from('settings').update({
