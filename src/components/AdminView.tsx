@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { format, startOfDay, startOfWeek, startOfMonth, isAfter } from 'date-fns';
+import { format, startOfDay, startOfWeek, startOfMonth, isAfter, subDays } from 'date-fns';
 import { StatCard } from './StatCard';
 import { ReceiptTemplate } from './ReceiptTemplate';
 import { Lock, Eye, Download, Moon, Sun } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 interface AdminViewProps {
   prices: { retail: number; distributor: number };
@@ -72,6 +73,23 @@ export function AdminView({ prices, setPrices }: AdminViewProps) {
     const exp = filteredExpenses.reduce((acc, e) => acc + Number(e.amount), 0);
     return { revenue, kg, count: filteredSales.length, expenses: exp };
   }, [filteredSales, filteredExpenses]);
+
+  const chartData = useMemo(() => {
+    const days: { day: string; revenue: number; expenses: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = startOfDay(subDays(new Date(), i));
+      const nextD = new Date(d);
+      nextD.setDate(nextD.getDate() + 1);
+      const dayRevenue = sales
+        .filter(s => { const t = new Date(s.created_at); return t >= d && t < nextD; })
+        .reduce((acc, s) => acc + Number(s.total_amount), 0);
+      const dayExpenses = expenses
+        .filter(e => { const t = new Date(e.created_at); return t >= d && t < nextD; })
+        .reduce((acc, e) => acc + Number(e.amount), 0);
+      days.push({ day: format(d, 'EEE'), revenue: dayRevenue, expenses: dayExpenses });
+    }
+    return days;
+  }, [sales, expenses]);
 
   const updatePrices = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,6 +202,27 @@ export function AdminView({ prices, setPrices }: AdminViewProps) {
         <StatCard label="KG Sold" value={`${stats.kg.toLocaleString()} kg`} />
         <StatCard label="Expenses" value={`₦${stats.expenses.toLocaleString()}`} variant="danger" />
         <StatCard label="Net Profit" value={`₦${(stats.revenue - stats.expenses).toLocaleString()}`} variant="success" />
+      </div>
+
+      {/* Revenue Chart */}
+      <div className="surface-card p-4">
+        <h3 className="font-bold heading-tight text-sm mb-4">Revenue (Last 7 Days)</h3>
+        <div className="h-52">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <XAxis dataKey="day" tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+              <YAxis tick={{ fontSize: 10 }} className="fill-muted-foreground" />
+              <Tooltip
+                contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                labelStyle={{ color: 'hsl(var(--foreground))' }}
+                formatter={(v: number) => [`₦${v.toLocaleString()}`, 'Revenue']}
+              />
+              <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="expenses" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Checkins */}
